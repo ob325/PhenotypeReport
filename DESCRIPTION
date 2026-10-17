@@ -1,0 +1,31 @@
+Package: PhenotypeReport
+Type: Package
+Title: Phenotype Report Generation from Strategus Results
+Version: 0.0.1
+Authors@R: c(
+  person("William", "O'Brien", email = "willjobrien@gmail.com", role = c("aut", "cre"))
+  )
+Description: Provides functions and Quarto templates to facilitate writing
+    epidemiological phenotype reports from Strategus results folders. Supports
+    summarizing database metadata, cohort counts, characteristics, and other
+    modules produced by the OHDSI Strategus pipeline.
+License: Apache License (>= 2)
+URL: https://github.com/ohdsi/PhenotypeReport
+BugReports: https://github.com/ohdsi/PhenotypeReport/issues
+Encoding: UTF-8
+RoxygenNote: 7.3.2
+Depends:
+  R (>= 4.1.0)
+Imports:
+  checkmate,
+  dplyr,
+  ggplot2,
+  gt,
+  scales,
+  utils
+Suggests:
+  testthat (>= 3.0.0),
+  knitr,
+  rmarkdown
+Config/testthat/edition: 3
+VignetteBuilder: knitr

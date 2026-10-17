@@ -1,0 +1,221 @@
+---
+title: "Getting Started with PhenotypeReport"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting Started with PhenotypeReport}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+```
+
+## Overview
+
+`PhenotypeReport` helps epidemiologists summarize and report on OHDSI phenotype
+definitions using results produced by a
+[Strategus](https://github.com/OHDSI/Strategus) pipeline run.
+
+The typical workflow is:
+
+1. Simulate or point to a Strategus results folder
+2. Create a settings object
+3. Call `get*` functions to read data from the results folder
+4. Call `table*` functions to render formatted tables for your report
+
+---
+
+## Step 1: Simulate a results folder
+
+If you do not yet have a Strategus results folder, use
+`simulateStrategusResults()` to create one for exploration and testing.
+
+```{r simulate}
+library(PhenotypeReport)
+
+simData <- simulateStrategusResults(nDatabases = 3, nCohorts = 4, seed = 42)
+str(simData, max.level = 1)
+```
+
+Write the simulated data to disk with `writeStrategusResults()`. The function
+creates a `results/` sub-folder containing one directory per Strategus module.
+
+```{r write, eval=FALSE}
+outputFolder <- tempfile("phenotype_report")
+writeStrategusResults(simData, outputFolder)
+
+# Folder structure produced:
+# outputFolder/
+#   results/
+#     DatabaseMetaData/
+#       database_meta_data.csv
+#     CohortGeneratorModule/
+#       cg_cohort_definition.csv
+#       cg_cohort_count.csv
+```
+
+```{r write-hidden, include=FALSE}
+outputFolder <- tempfile("phenotype_report")
+writeStrategusResults(simData, outputFolder)
+```
+
+---
+
+## Step 2: Create a settings object
+
+`createSettings()` points the package at your results folder. Use `cohortIds`
+to restrict the report to a specific subset of cohorts; omit it to include all
+cohorts found in the results.
+
+```{r settings}
+resultsFolder <- file.path(outputFolder, "results")
+
+# Include all cohorts
+settings <- createSettings(resultsFolder = resultsFolder)
+settings
+
+# Or restrict to specific cohort IDs
+settings <- createSettings(resultsFolder = resultsFolder, cohortIds = c(1L, 2L))
+settings
+```
+
+---
+
+## Step 3: Read database information
+
+`getDatabaseInformation()` reads `DatabaseMetaData/database_meta_data.csv` and
+returns a plain data frame — one row per database.
+
+```{r get-db}
+dbInfo <- getDatabaseInformation(settings)
+dbInfo[, c("cdm_source_name", "cdm_version", "vocabulary_version",
+           "max_obs_period_end_date")]
+```
+
+---
+
+## Step 4: Render a table for your report
+
+`tableDatabaseInformation()` takes the data frame from the previous step and
+returns a formatted `gt` table ready for inclusion in an R Markdown or Quarto
+document.
+
+```{r table-db}
+tableDatabaseInformation(dbInfo)
+```
+
+---
+
+## Step 5: Read cohort counts
+
+`getCohortCounts()` reads cohort counts and definitions from
+`CohortGeneratorModule/` and returns a long data frame with one row per
+database-cohort combination. The `cohortIds` specified in `createSettings()`
+are applied here — if all cohorts are desired, leave `cohortIds = NULL`.
+
+```{r get-counts}
+counts <- getCohortCounts(settings)
+counts
+```
+
+---
+
+## Step 6: Render a cohort counts table
+
+`tableCohortCounts()` pivots the data wide and renders a `gt` table with one
+row per cohort and one column group per database, showing both persons and
+events.
+
+```{r table-counts}
+tableCohortCounts(counts)
+```
+
+---
+
+## Step 7: Plot cohort counts
+
+`plotCohortCounts()` produces a grouped bar chart of person counts by cohort
+and database.
+
+```{r plot-counts, fig.width=7, fig.height=4}
+plotCohortCounts(counts)
+```
+
+---
+
+## Cohort Incidence
+
+`getCohortIncidence()` reads `CohortIncidenceModule/ci_incidence_summary.csv`
+and returns incidence rates and proportions stratified by overall, age group,
+and gender.
+
+```{r get-incidence}
+ci <- getCohortIncidence(settings)
+```
+
+The `stratifyBy` argument accepts `"overall"` (default) or a character vector
+of one or two variables from `"age"`, `"gender"`, and `"year"`. The plot type
+is chosen automatically based on the combination.
+
+### Overall
+
+```{r table-incidence-overall}
+tableCohortIncidence(ci, stratifyBy = "overall")
+```
+
+```{r plot-incidence-overall, fig.width=7, fig.height=4}
+plotCohortIncidence(ci, stratifyBy = "overall")
+```
+
+### Age
+
+```{r plot-incidence-age, fig.width=8, fig.height=4}
+plotCohortIncidence(ci, stratifyBy = "age")
+```
+
+### Gender
+
+```{r plot-incidence-gender, fig.width=7, fig.height=4}
+plotCohortIncidence(ci, stratifyBy = "gender")
+```
+
+### Year
+
+```{r plot-incidence-year, fig.width=7, fig.height=4}
+plotCohortIncidence(ci, stratifyBy = "year")
+```
+
+### Year + Gender
+
+Faceted by cohort × database; one line per gender.
+
+```{r plot-incidence-year-gender, fig.width=9, fig.height=6}
+plotCohortIncidence(ci, stratifyBy = c("year", "gender"))
+```
+
+### Year + Age
+
+Faceted by cohort × database; one line per age group.
+
+```{r plot-incidence-year-age, fig.width=9, fig.height=6}
+plotCohortIncidence(ci, stratifyBy = c("year", "age"))
+```
+
+### Age + Gender
+
+Faceted by cohort × database; one line per gender across age groups.
+
+```{r plot-incidence-age-gender, fig.width=9, fig.height=6}
+plotCohortIncidence(ci, stratifyBy = c("age", "gender"))
+```
+
+### Age + Gender + Year
+
+Returns one plot per database. Each row is a cohort; each column is an age
+group; lines show Male vs Female incidence over time.
+
+```{r plot-incidence-age-gender-year, fig.width=14, fig.height=6}
+plots <- plotCohortIncidence(ci, stratifyBy = c("age", "gender", "year"))
+for (p in plots) print(p)
+```
