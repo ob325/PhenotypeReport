@@ -266,18 +266,17 @@
 
 .tableCiOverall <- function(data) {
   d <- data[is.na(data$year) & data$age_group == "Overall" & data$gender == "Overall",
-            c("cohort_name", "database_id", "persons_at_risk", "outcomes",
-              "incidence_proportion_p100p", "incidence_rate_p100py")]
+            c("cohort_name", "database_id", "cohort_count", "person_years",
+              "incidence_rate_p100py")]
 
   gt::gt(d) |>
     gt::cols_label(cohort_name = "Cohort", database_id = "Database",
-                   persons_at_risk = "Persons at Risk", outcomes = "Outcomes",
-                   incidence_proportion_p100p = "IP per 100p",
+                   cohort_count = "Cohort Count", person_years = "Person-Years",
                    incidence_rate_p100py = "IR per 100py") |>
     gt::tab_header(title = "Cohort Incidence") |>
-    gt::fmt_integer(columns = c("persons_at_risk", "outcomes")) |>
+    gt::fmt_integer(columns = c("cohort_count", "person_years")) |>
     .fmtIncidenceTable(
-      irCols   = c("incidence_proportion_p100p", "incidence_rate_p100py"),
+      irCols   = "incidence_rate_p100py",
       leftCols = c("cohort_name", "database_id")
     )
 }
@@ -314,18 +313,17 @@
 
 .tableCiYear <- function(data) {
   d <- data[data$age_group == "Overall" & data$gender == "Overall",
-            c("cohort_name", "database_id", "year", "incidence_rate_p100py", "incidence_proportion_p100p")]
+            c("cohort_name", "database_id", "year", "incidence_rate_p100py")]
   d$year_label <- ifelse(is.na(d$year), "Overall", as.character(d$year))
   d <- d[order(d$cohort_name, d$database_id, d$year, na.last = FALSE),
-         c("cohort_name", "database_id", "year_label", "incidence_rate_p100py", "incidence_proportion_p100p")]
+         c("cohort_name", "database_id", "year_label", "incidence_rate_p100py")]
 
   gt::gt(d) |>
     gt::cols_label(cohort_name = "Cohort", database_id = "Database", year_label = "Year",
-                   incidence_rate_p100py = "IR per 100py",
-                   incidence_proportion_p100p = "IP per 100p") |>
+                   incidence_rate_p100py = "IR per 100py") |>
     gt::tab_header(title = "Cohort Incidence Over Time") |>
     .fmtIncidenceTable(
-      irCols   = c("incidence_rate_p100py", "incidence_proportion_p100p"),
+      irCols   = "incidence_rate_p100py",
       leftCols = c("cohort_name", "database_id", "year_label")
     )
 }
@@ -427,16 +425,17 @@
 
 #' Get Cohort Incidence
 #'
-#' Reads incidence results from a Strategus CohortIncidenceModule results
-#' folder and returns a combined data frame with cohort names attached.
+#' Reads incidence results from the CohortDiagnosticsModule
+#' \code{cd_incidence_rate.csv} file in each database sub-folder and returns a
+#' combined data frame with cohort names attached.
 #'
 #' @param settings A \code{PhenotypeReportSettings} object created by
 #'   \code{\link{createSettings}}.
 #'
 #' @return A data frame with columns \code{database_id}, \code{cohort_id},
 #'   \code{cohort_name}, \code{age_group}, \code{gender}, \code{year},
-#'   \code{persons_at_risk}, \code{person_days}, \code{outcomes},
-#'   \code{incidence_proportion_p100p}, and \code{incidence_rate_p100py}.
+#'   \code{cohort_count}, \code{person_years}, and
+#'   \code{incidence_rate_p100py}.
 #'
 #' @export
 getCohortIncidence <- function(settings) {
@@ -447,24 +446,39 @@ getCohortIncidence <- function(settings) {
           paste(basename(dbFolders), collapse = ", "))
 
   data <- do.call(rbind, lapply(dbFolders, function(dbFolder) {
-    csvPath <- file.path(dbFolder, "CohortIncidenceModule", "ci_incidence_summary.csv")
+    csvPath <- file.path(dbFolder, "CohortDiagnosticsModule", "cd_incidence_rate.csv")
     if (!file.exists(csvPath)) {
-      message("  [SKIP] No incidence CSV in: ", basename(dbFolder))
+      message("  [SKIP] No cd_incidence_rate.csv in: ", basename(dbFolder))
       return(NULL)
     }
-    d <- utils::read.csv(csvPath, stringsAsFactors = FALSE, na.strings = "NA")
+    d <- utils::read.csv(csvPath, stringsAsFactors = FALSE)
     message("  [READ] ", basename(dbFolder), ": ", nrow(d), " rows")
     d
   }))
   message("Combined incidence data: ", nrow(data), " rows")
+
+  # Normalize to internal conventions used by all table/plot functions:
+  #   calendar_year = 0  -> year = NA (not stratified by year)
+  #   gender/age_group "" -> "Overall"
+  #   incidence_rate     -> incidence_rate_p100py
+  data$year <- suppressWarnings(as.integer(data$calendar_year))
+  data$year[data$year == 0L] <- NA_integer_
+  data$calendar_year <- NULL
+  message("Year column normalized (0 -> NA); unique years: ",
+          paste(sort(unique(data$year)), collapse = ", "))
+
+  data$gender[data$gender == ""]       <- "Overall"
+  data$age_group[data$age_group == ""] <- "Overall"
+  message("Gender levels: ", paste(sort(unique(data$gender)), collapse = ", "))
+  message("Age group levels: ", paste(sort(unique(data$age_group)), collapse = ", "))
+
+  names(data)[names(data) == "incidence_rate"] <- "incidence_rate_p100py"
 
   defPath <- Filter(file.exists,
                     file.path(dbFolders, "CohortGeneratorModule", "cg_cohort_definition.csv"))[[1]]
   message("Reading cohort definitions from: ", defPath)
   definitions <- utils::read.csv(defPath, stringsAsFactors = FALSE)
   message("Loaded ", nrow(definitions), " cohort definition(s)")
-
-  data$year <- suppressWarnings(as.integer(data$year))
 
   data <- merge(
     data,
@@ -504,8 +518,7 @@ getCohortIncidence <- function(settings) {
   data[, c(
     "database_id", "cohort_id", "cohort_name",
     "age_group", "gender", "year",
-    "persons_at_risk", "person_days", "outcomes",
-    "incidence_proportion_p100p", "incidence_rate_p100py"
+    "cohort_count", "person_years", "incidence_rate_p100py"
   )]
 }
 

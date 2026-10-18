@@ -16,7 +16,7 @@
 #'
 #' Creates a list of simulated data frames that mimic the CSV output produced
 #' by a Strategus pipeline run, covering the DatabaseMetaData,
-#' CohortGeneratorModule, and CohortIncidenceModule modules.
+#' CohortGeneratorModule, and CohortDiagnosticsModule modules.
 #'
 #' @param nDatabases  Number of databases to simulate. Must be between 1 and 12.
 #' @param nCohorts    Number of cohorts to simulate. Must be between 1 and 10.
@@ -27,7 +27,7 @@
 #'     \item{databaseMetaData}{Data frame matching \code{database_meta_data.csv}.}
 #'     \item{cohortDefinition}{Data frame matching \code{cg_cohort_definition.csv}.}
 #'     \item{cohortCount}{Data frame matching \code{cg_cohort_count.csv}.}
-#'     \item{cohortIncidence}{Data frame matching \code{ci_incidence_summary.csv}.}
+#'     \item{cohortIncidence}{Data frame matching \code{cd_incidence_rate.csv}.}
 #'   }
 #'
 #' @examples
@@ -110,16 +110,15 @@ simulateStrategusResults <- function(nDatabases = 2,
   )
 
   ageGroups <- c("18-34", "35-44", "45-54", "55-64", "65-74", "75+")
-  genders   <- c("Overall", "Male", "Female")
   years     <- 2010L:2026L
   nYears    <- length(years)
 
   # Multipliers relative to overall IR
   ageMults    <- c("18-34" = 0.25, "35-44" = 0.55, "45-54" = 1.00,
                    "55-64" = 1.70, "65-74" = 2.80, "75+"   = 3.80)
-  genderMults <- c(Overall = 1.00, Male = 1.18, Female = 0.85)
+  genderMults <- c(Male = 1.18, Female = 0.85)
 
-  # One baseline IR and persons-at-risk per cohort x database
+  # One baseline IR and person-years per cohort x database
   ciCombos <- expand.grid(
     database_id = databaseIds,
     cohort_id   = seq_len(nCohorts),
@@ -128,7 +127,7 @@ simulateStrategusResults <- function(nDatabases = 2,
   nCombos <- nrow(ciCombos)
 
   baseIR  <- stats::runif(nCombos, min = 3, max = 18)   # per 100 person-years
-  basePAR <- round(exp(stats::rnorm(nCombos, log(8000), 0.5)))  # persons at risk
+  basePY  <- round(exp(stats::rnorm(nCombos, log(8000), 0.5)))  # person-years
 
   # Smooth year multipliers: random walk with slight drift per combo
   yearMults <- matrix(NA_real_, nrow = nCombos, ncol = nYears)
@@ -137,51 +136,49 @@ simulateStrategusResults <- function(nDatabases = 2,
     yearMults[i, ] <- exp(cumsum(c(0, steps)))
   }
 
-  # Build one data frame per strata group then rbind
+  # calendar_year = 0 means "not stratified by year" (overall).
+  # gender = "" and age_group = "" mean "not stratified" (overall).
   buildRows <- function(ageVec, genderVec, yearVec) {
     grid <- expand.grid(
-      combo_idx = seq_len(nCombos),
-      age_group = ageVec,
-      gender    = genderVec,
-      year      = yearVec,
+      combo_idx     = seq_len(nCombos),
+      age_group     = ageVec,
+      gender        = genderVec,
+      calendar_year = yearVec,
       stringsAsFactors = FALSE
     )
 
-    aM <- ifelse(grid$age_group == "Overall", 1.0, ageMults[grid$age_group])
-    gM <- genderMults[grid$gender]
+    aM <- ifelse(grid$age_group == "", 1.0, ageMults[grid$age_group])
+    gM <- ifelse(grid$gender == "", 1.0, genderMults[grid$gender])
     yM <- ifelse(
-      is.na(grid$year), 1.0,
-      yearMults[cbind(grid$combo_idx, match(grid$year, years))]
+      grid$calendar_year == 0L, 1.0,
+      yearMults[cbind(grid$combo_idx, match(grid$calendar_year, years))]
     )
 
-    ir  <- round(baseIR[grid$combo_idx] * aM * gM * yM, 2)
-    par <- round(basePAR[grid$combo_idx] * aM *
-                   ifelse(is.na(grid$year), 1.0, 1 / nYears))
-    pd  <- round(par * stats::runif(nrow(grid), 300, 600))
-    out <- pmax(1L, round(ir / 100 * pd / 365.25))
+    ir <- round(baseIR[grid$combo_idx] * aM * gM * yM, 2)
+    py <- round(basePY[grid$combo_idx] * aM *
+                  ifelse(grid$calendar_year == 0L, 1.0, 1 / nYears))
+    cc <- pmax(1L, round(ir / 100 * py))
 
     cbind(
       ciCombos[grid$combo_idx, ],
-      grid[, c("age_group", "gender", "year")],
+      grid[, c("age_group", "gender", "calendar_year")],
       data.frame(
-        persons_at_risk            = par,
-        person_days                = pd,
-        outcomes                   = out,
-        incidence_proportion_p100p = round(out / par * 100, 2),
-        incidence_rate_p100py      = ir,
-        stringsAsFactors           = FALSE
+        cohort_count   = cc,
+        person_years   = py,
+        incidence_rate = ir,
+        stringsAsFactors = FALSE
       )
     )
   }
 
   cohortIncidence <- rbind(
-    buildRows("Overall",  "Overall",          NA_integer_),
-    buildRows(ageGroups,  "Overall",          NA_integer_),
-    buildRows("Overall",  c("Male","Female"), NA_integer_),
-    buildRows(ageGroups,  c("Male","Female"), NA_integer_),
-    buildRows("Overall",  genders,            years),
-    buildRows(ageGroups,  "Overall",          years),
-    buildRows(ageGroups,  c("Male","Female"), years)
+    buildRows("",         "",                   0L),
+    buildRows(ageGroups,  "",                   0L),
+    buildRows("",         c("Male", "Female"),  0L),
+    buildRows(ageGroups,  c("Male", "Female"),  0L),
+    buildRows("",         c("", "Male", "Female"), years),
+    buildRows(ageGroups,  "",                   years),
+    buildRows(ageGroups,  c("Male", "Female"),  years)
   )
   row.names(cohortIncidence) <- NULL
 
@@ -224,14 +221,14 @@ writeStrategusResults <- function(simulatedResults, outputFolder) {
   databaseIds   <- simulatedResults$databaseMetaData$database_id
 
   for (dbId in databaseIds) {
-    dbFolder              <- file.path(resultsFolder, dbId)
-    databaseMetaDataFolder <- file.path(dbFolder, "DatabaseMetaData")
-    cohortGeneratorFolder  <- file.path(dbFolder, "CohortGeneratorModule")
-    cohortIncidenceFolder  <- file.path(dbFolder, "CohortIncidenceModule")
+    dbFolder                  <- file.path(resultsFolder, dbId)
+    databaseMetaDataFolder    <- file.path(dbFolder, "DatabaseMetaData")
+    cohortGeneratorFolder     <- file.path(dbFolder, "CohortGeneratorModule")
+    cohortDiagnosticsFolder   <- file.path(dbFolder, "CohortDiagnosticsModule")
 
-    dir.create(databaseMetaDataFolder, recursive = TRUE, showWarnings = FALSE)
-    dir.create(cohortGeneratorFolder,  recursive = TRUE, showWarnings = FALSE)
-    dir.create(cohortIncidenceFolder,  recursive = TRUE, showWarnings = FALSE)
+    dir.create(databaseMetaDataFolder,  recursive = TRUE, showWarnings = FALSE)
+    dir.create(cohortGeneratorFolder,   recursive = TRUE, showWarnings = FALSE)
+    dir.create(cohortDiagnosticsFolder, recursive = TRUE, showWarnings = FALSE)
 
     utils::write.csv(
       simulatedResults$databaseMetaData[simulatedResults$databaseMetaData$database_id == dbId, ],
@@ -253,7 +250,7 @@ writeStrategusResults <- function(simulatedResults, outputFolder) {
 
     utils::write.csv(
       simulatedResults$cohortIncidence[simulatedResults$cohortIncidence$database_id == dbId, ],
-      file.path(cohortIncidenceFolder, "ci_incidence_summary.csv"),
+      file.path(cohortDiagnosticsFolder, "cd_incidence_rate.csv"),
       row.names = FALSE
     )
   }
