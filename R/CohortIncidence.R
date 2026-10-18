@@ -107,7 +107,7 @@
   )) +
     ggplot2::geom_col(position = "dodge") +
     ggplot2::labs(title = "Incidence Rate by Cohort and Database",
-                  x = NULL, y = "IR per 100 person-years", fill = "Database") +
+                  x = NULL, y = "IR per 1,000 person-years", fill = "Database") +
     .bwTheme
 }
 
@@ -123,7 +123,7 @@
     ggplot2::geom_line() +
     ggplot2::facet_wrap(~cohort_name) +
     ggplot2::labs(title = "Incidence Rate by Age Group",
-                  x = "Age Group", y = "IR per 100 person-years", color = "Database") +
+                  x = "Age Group", y = "IR per 1,000 person-years", color = "Database") +
     .bwTheme
 }
 
@@ -136,7 +136,7 @@
     ggplot2::geom_col(position = "dodge") +
     ggplot2::facet_wrap(~cohort_name) +
     ggplot2::labs(title = "Incidence Rate by Gender",
-                  x = NULL, y = "IR per 100 person-years", fill = "Database") +
+                  x = NULL, y = "IR per 1,000 person-years", fill = "Database") +
     .bwTheme
 }
 
@@ -151,7 +151,7 @@
     ggplot2::facet_wrap(~cohort_name) +
     .yearAxis +
     ggplot2::labs(title = "Incidence Rate Over Time",
-                  x = "Year", y = "IR per 100 person-years", color = "Database") +
+                  x = "Year", y = "IR per 1,000 person-years", color = "Database") +
     .bwTheme
 }
 
@@ -170,7 +170,7 @@
     .yearAxis +
     .genderScale +
     ggplot2::labs(title = "Incidence Rate Over Time by Gender",
-                  x = "Year", y = "IR per 100 person-years", color = "Gender") +
+                  x = "Year", y = "IR per 1,000 person-years", color = "Gender") +
     .bwTheme
 }
 
@@ -188,7 +188,7 @@
                         cols = ggplot2::vars(.data$database_id)) +
     .yearAxis +
     ggplot2::labs(title = "Incidence Rate Over Time by Age Group",
-                  x = "Year", y = "IR per 100 person-years", color = "Age Group") +
+                  x = "Year", y = "IR per 1,000 person-years", color = "Age Group") +
     .bwTheme
 }
 
@@ -207,7 +207,7 @@
                         cols = ggplot2::vars(.data$database_id)) +
     .genderScale +
     ggplot2::labs(title = "Incidence Rate by Age Group and Gender",
-                  x = "Age Group", y = "IR per 100 person-years", color = "Gender") +
+                  x = "Age Group", y = "IR per 1,000 person-years", color = "Gender") +
     .bwTheme
 }
 
@@ -232,7 +232,7 @@
       ggplot2::labs(
         title = paste("Incidence Rate by Age Group and Sex Over Time —", db),
         x     = "Year",
-        y     = "IR per 100 person-years",
+        y     = "IR per 1,000 person-years",
         color = "Sex"
       ) +
       ggplot2::theme_bw() +
@@ -273,7 +273,7 @@
   gt::gt(d) |>
     gt::cols_label(cohort_name = "Cohort", database_id = "Database",
                    cohort_count = "Cohort Count", person_years = "Person-Years",
-                   incidence_rate_p100py = "IR per 100py") |>
+                   incidence_rate_p100py = "IR per 1,000py") |>
     gt::tab_header(title = "Cohort Incidence") |>
     gt::fmt_integer(columns = c("cohort_count", "person_years")) |>
     .fmtIncidenceTable(
@@ -288,14 +288,15 @@
             c("cohort_name", "database_id", "age_group", "incidence_rate_p100py")]
   d$age_group <- ifelse(is.na(d$age_group), "Overall", d$age_group)
 
-  wide <- tidyr::pivot_wider(d, names_from = "age_group", values_from = "incidence_rate_p100py")
-  wide <- wide[order(wide$cohort_name, wide$database_id), c("cohort_name", "database_id", ageLevels)]
+  wide        <- tidyr::pivot_wider(d, names_from = "age_group", values_from = "incidence_rate_p100py")
+  presentCols <- intersect(ageLevels, names(wide))
+  wide        <- wide[order(wide$cohort_name, wide$database_id), c("cohort_name", "database_id", presentCols)]
 
   gt::gt(wide) |>
-    gt::tab_spanner("Age Group", columns = ageLevels) |>
+    gt::tab_spanner("Age Group", columns = presentCols) |>
     gt::cols_label(cohort_name = "Cohort", database_id = "Database") |>
-    gt::tab_header(title = "IR per 100 Person-Years by Age Group") |>
-    .fmtIncidenceTable(irCols = ageLevels, leftCols = c("cohort_name", "database_id"))
+    gt::tab_header(title = "IR per 1,000 Person-Years by Age Group") |>
+    .fmtIncidenceTable(irCols = presentCols, leftCols = c("cohort_name", "database_id"))
 }
 
 .tableCiGender <- function(data) {
@@ -304,14 +305,15 @@
             c("cohort_name", "database_id", "gender", "incidence_rate_p100py")]
   d$gender <- ifelse(is.na(d$gender), "Overall", d$gender)
 
-  wide <- tidyr::pivot_wider(d, names_from = "gender", values_from = "incidence_rate_p100py")
-  wide <- wide[order(wide$cohort_name, wide$database_id), c("cohort_name", "database_id", genderLevels)]
+  wide        <- tidyr::pivot_wider(d, names_from = "gender", values_from = "incidence_rate_p100py")
+  presentCols <- intersect(genderLevels, names(wide))
+  wide        <- wide[order(wide$cohort_name, wide$database_id), c("cohort_name", "database_id", presentCols)]
 
   gt::gt(wide) |>
-    gt::tab_spanner("Gender", columns = genderLevels) |>
+    gt::tab_spanner("Gender", columns = presentCols) |>
     gt::cols_label(cohort_name = "Cohort", database_id = "Database") |>
-    gt::tab_header(title = "IR per 100 Person-Years by Gender") |>
-    .fmtIncidenceTable(irCols = genderLevels, leftCols = c("cohort_name", "database_id"))
+    gt::tab_header(title = "IR per 1,000 Person-Years by Gender") |>
+    .fmtIncidenceTable(irCols = presentCols, leftCols = c("cohort_name", "database_id"))
 }
 
 .tableCiYear <- function(data) {
@@ -323,7 +325,7 @@
 
   gt::gt(d) |>
     gt::cols_label(cohort_name = "Cohort", database_id = "Database", year_label = "Year",
-                   incidence_rate_p100py = "IR per 100py") |>
+                   incidence_rate_p100py = "IR per 1,000py") |>
     gt::tab_header(title = "Cohort Incidence Over Time") |>
     .fmtIncidenceTable(
       irCols   = "incidence_rate_p100py",
@@ -342,16 +344,17 @@
   d <- d[d$age_group %in% ageLevels & d$gender %in% genderLevels, ]
   d$col_key <- paste0(d$age_group, "__", d$gender)
 
-  wide    <- tidyr::pivot_wider(d[, c("cohort_name", "database_id", "col_key", "incidence_rate_p100py")],
-                                names_from = "col_key", values_from = "incidence_rate_p100py")
-  allKeys <- as.vector(outer(ageLevels, genderLevels, paste, sep = "__"))
-  wide    <- wide[order(wide$cohort_name, wide$database_id), c("cohort_name", "database_id", allKeys)]
+  wide        <- tidyr::pivot_wider(d[, c("cohort_name", "database_id", "col_key", "incidence_rate_p100py")],
+                                    names_from = "col_key", values_from = "incidence_rate_p100py")
+  allKeys     <- as.vector(outer(ageLevels, genderLevels, paste, sep = "__"))
+  presentKeys <- intersect(allKeys, names(wide))
+  wide        <- wide[order(wide$cohort_name, wide$database_id), c("cohort_name", "database_id", presentKeys)]
 
   gt::gt(wide) |>
-    gt::tab_spanner_delim(delim = "__", columns = dplyr::all_of(allKeys)) |>
+    gt::tab_spanner_delim(delim = "__", columns = dplyr::all_of(presentKeys)) |>
     gt::cols_label(cohort_name = "Cohort", database_id = "Database") |>
-    gt::tab_header(title = "IR per 100 Person-Years by Age Group and Gender") |>
-    .fmtIncidenceTable(irCols = allKeys, leftCols = c("cohort_name", "database_id"))
+    gt::tab_header(title = "IR per 1,000 Person-Years by Age Group and Gender") |>
+    .fmtIncidenceTable(irCols = presentKeys, leftCols = c("cohort_name", "database_id"))
 }
 
 .tableCiYearGender <- function(data) {
@@ -365,14 +368,15 @@
   d <- d[order(d$cohort_name, d$database_id, d$year, na.last = FALSE),
          c("cohort_name", "database_id", "year_label", "gender", "incidence_rate_p100py")]
 
-  wide <- tidyr::pivot_wider(d, names_from = "gender", values_from = "incidence_rate_p100py")
-  wide <- wide[, c("cohort_name", "database_id", "year_label", genderLevels)]
+  wide        <- tidyr::pivot_wider(d, names_from = "gender", values_from = "incidence_rate_p100py")
+  presentCols <- intersect(genderLevels, names(wide))
+  wide        <- wide[, c("cohort_name", "database_id", "year_label", presentCols)]
 
   gt::gt(wide) |>
-    gt::tab_spanner("Gender", columns = genderLevels) |>
+    gt::tab_spanner("Gender", columns = presentCols) |>
     gt::cols_label(cohort_name = "Cohort", database_id = "Database", year_label = "Year") |>
-    gt::tab_header(title = "IR per 100 Person-Years by Year and Gender") |>
-    .fmtIncidenceTable(irCols = genderLevels, leftCols = c("cohort_name", "database_id", "year_label"))
+    gt::tab_header(title = "IR per 1,000 Person-Years by Year and Gender") |>
+    .fmtIncidenceTable(irCols = presentCols, leftCols = c("cohort_name", "database_id", "year_label"))
 }
 
 .tableCiYearAge <- function(data) {
@@ -386,14 +390,15 @@
   d <- d[order(d$cohort_name, d$database_id, d$year, na.last = FALSE),
          c("cohort_name", "database_id", "year_label", "age_group", "incidence_rate_p100py")]
 
-  wide <- tidyr::pivot_wider(d, names_from = "age_group", values_from = "incidence_rate_p100py")
-  wide <- wide[, c("cohort_name", "database_id", "year_label", ageLevels)]
+  wide        <- tidyr::pivot_wider(d, names_from = "age_group", values_from = "incidence_rate_p100py")
+  presentCols <- intersect(ageLevels, names(wide))
+  wide        <- wide[, c("cohort_name", "database_id", "year_label", presentCols)]
 
   gt::gt(wide) |>
-    gt::tab_spanner("Age Group", columns = ageLevels) |>
+    gt::tab_spanner("Age Group", columns = presentCols) |>
     gt::cols_label(cohort_name = "Cohort", database_id = "Database", year_label = "Year") |>
-    gt::tab_header(title = "IR per 100 Person-Years by Year and Age Group") |>
-    .fmtIncidenceTable(irCols = ageLevels, leftCols = c("cohort_name", "database_id", "year_label"))
+    gt::tab_header(title = "IR per 1,000 Person-Years by Year and Age Group") |>
+    .fmtIncidenceTable(irCols = presentCols, leftCols = c("cohort_name", "database_id", "year_label"))
 }
 
 .tableCiAgeGenderYear <- function(data) {
@@ -409,15 +414,16 @@
   d <- d[order(d$cohort_name, d$database_id, d$year, na.last = FALSE),
          c("cohort_name", "database_id", "year_label", "col_key", "incidence_rate_p100py")]
 
-  wide    <- tidyr::pivot_wider(d, names_from = "col_key", values_from = "incidence_rate_p100py")
-  allKeys <- as.vector(outer(ageLevels, genderLevels, paste, sep = "__"))
-  wide    <- wide[, c("cohort_name", "database_id", "year_label", allKeys)]
+  wide        <- tidyr::pivot_wider(d, names_from = "col_key", values_from = "incidence_rate_p100py")
+  allKeys     <- as.vector(outer(ageLevels, genderLevels, paste, sep = "__"))
+  presentKeys <- intersect(allKeys, names(wide))
+  wide        <- wide[, c("cohort_name", "database_id", "year_label", presentKeys)]
 
   gt::gt(wide) |>
-    gt::tab_spanner_delim(delim = "__", columns = dplyr::all_of(allKeys)) |>
+    gt::tab_spanner_delim(delim = "__", columns = dplyr::all_of(presentKeys)) |>
     gt::cols_label(cohort_name = "Cohort", database_id = "Database", year_label = "Year") |>
-    gt::tab_header(title = "IR per 100 Person-Years by Year, Age Group, and Gender") |>
-    .fmtIncidenceTable(irCols = allKeys, leftCols = c("cohort_name", "database_id", "year_label"))
+    gt::tab_header(title = "IR per 1,000 Person-Years by Year, Age Group, and Gender") |>
+    .fmtIncidenceTable(irCols = presentKeys, leftCols = c("cohort_name", "database_id", "year_label"))
 }
 
 # ── Table dispatch ────────────────────────────────────────────────────────────
