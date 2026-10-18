@@ -12,7 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.ageOrder    <- c("18-34", "35-44", "45-54", "55-64", "65-74", "75+")
+# Sort age-group strings by their leading number so any label format works.
+.sortAgeGroups <- function(ageVec) {
+  obs    <- sort(unique(ageVec[!is.na(ageVec)]))
+  starts <- suppressWarnings(as.integer(sub("^([0-9]+).*", "\\1", obs)))
+  obs[order(starts, na.last = TRUE)]
+}
+
 .genderScale <- ggplot2::scale_color_manual(
   values = c(Overall = "black", Male = "#2166ac", Female = "#d6604d")
 )
@@ -40,7 +46,7 @@
     d <- cohortIncidence[is.na(cohortIncidence$year) &
                            !is.na(cohortIncidence$age_group) &
                            is.na(cohortIncidence$gender), ]
-    d$age_group <- factor(d$age_group, levels = .ageOrder)
+    d$age_group <- factor(d$age_group, levels = .sortAgeGroups(d$age_group))
     list(data = d, colorVar = "database_id", xVar = "age_group", facetType = "cohort")
 
   } else if (identical(strata, "gender")) {
@@ -72,14 +78,14 @@
     d <- cohortIncidence[!is.na(cohortIncidence$year) &
                            is.na(cohortIncidence$gender) &
                            !is.na(cohortIncidence$age_group), ]
-    d$age_group <- factor(d$age_group, levels = .ageOrder)
+    d$age_group <- factor(d$age_group, levels = .sortAgeGroups(d$age_group))
     list(data = d, colorVar = "age_group", xVar = "year", facetType = "grid")
 
   } else if (identical(strata, c("age", "gender"))) {
     d <- cohortIncidence[is.na(cohortIncidence$year) &
                            !is.na(cohortIncidence$age_group) &
                            !is.na(cohortIncidence$gender), ]
-    d$age_group <- factor(d$age_group, levels = .ageOrder)
+    d$age_group <- factor(d$age_group, levels = .sortAgeGroups(d$age_group))
     d$gender    <- factor(d$gender, levels = c("Male", "Female"))
     list(data = d, colorVar = "gender", xVar = "age_group", facetType = "grid")
 
@@ -87,7 +93,7 @@
     d <- cohortIncidence[!is.na(cohortIncidence$year) &
                            !is.na(cohortIncidence$age_group) &
                            !is.na(cohortIncidence$gender), ]
-    d$age_group <- factor(d$age_group, levels = .ageOrder)
+    d$age_group <- factor(d$age_group, levels = .sortAgeGroups(d$age_group))
     d$gender    <- factor(d$gender, levels = c("Male", "Female"))
     list(data = d, colorVar = "gender", xVar = "year", facetType = "age_year_gender")
 
@@ -113,7 +119,6 @@
 
 .plotIncidenceAge <- function(data) {
   d <- data
-  d$age_group <- factor(d$age_group, levels = .ageOrder)
   ggplot2::ggplot(d, ggplot2::aes(
     x     = .data$age_group,
     y     = .data$incidence_rate_p100py,
@@ -176,7 +181,6 @@
 
 .plotIncidenceYearAge <- function(data) {
   d <- data
-  d$age_group <- factor(d$age_group, levels = .ageOrder)
   ggplot2::ggplot(d, ggplot2::aes(
     x     = .data$year,
     y     = .data$incidence_rate_p100py,
@@ -194,8 +198,7 @@
 
 .plotIncidenceAgeGender <- function(data) {
   d <- data
-  d$age_group <- factor(d$age_group, levels = .ageOrder)
-  d$gender    <- factor(d$gender, levels = c("Male", "Female"))
+  d$gender <- factor(d$gender, levels = c("Male", "Female"))
   ggplot2::ggplot(d, ggplot2::aes(
     x     = .data$age_group,
     y     = .data$incidence_rate_p100py,
@@ -213,8 +216,7 @@
 
 .plotIncidenceAgeGenderYear <- function(data) {
   d <- data
-  d$age_group <- factor(d$age_group, levels = .ageOrder)
-  d$gender    <- factor(d$gender, levels = c("Male", "Female"))
+  d$gender <- factor(d$gender, levels = c("Male", "Female"))
   databases   <- unique(d$database_id)
 
   lapply(stats::setNames(databases, databases), function(db) {
@@ -283,10 +285,10 @@
 }
 
 .tableCiAge <- function(data) {
-  ageLevels <- c("Overall", .ageOrder)
   d <- data[is.na(data$year) & is.na(data$gender),
             c("cohort_name", "database_id", "age_group", "incidence_rate_p100py")]
   d$age_group <- ifelse(is.na(d$age_group), "Overall", d$age_group)
+  ageLevels   <- c("Overall", .sortAgeGroups(d$age_group[d$age_group != "Overall"]))
 
   wide        <- tidyr::pivot_wider(d, names_from = "age_group", values_from = "incidence_rate_p100py")
   presentCols <- intersect(ageLevels, names(wide))
@@ -334,13 +336,13 @@
 }
 
 .tableCiAgeGender <- function(data) {
-  ageLevels    <- c("Overall", .ageOrder)
   genderLevels <- c("Overall", "Male", "Female")
 
   d <- data[is.na(data$year),
             c("cohort_name", "database_id", "age_group", "gender", "incidence_rate_p100py")]
   d$age_group <- ifelse(is.na(d$age_group), "Overall", d$age_group)
   d$gender    <- ifelse(is.na(d$gender),    "Overall", d$gender)
+  ageLevels   <- c("Overall", .sortAgeGroups(d$age_group[d$age_group != "Overall"]))
   d <- d[d$age_group %in% ageLevels & d$gender %in% genderLevels, ]
   d$col_key <- paste0(d$age_group, "__", d$gender)
 
@@ -380,12 +382,11 @@
 }
 
 .tableCiYearAge <- function(data) {
-  ageLevels <- c("Overall", .ageOrder)
-
   d <- data[is.na(data$gender),
             c("cohort_name", "database_id", "year", "age_group", "incidence_rate_p100py")]
   d$year_label <- ifelse(is.na(d$year), "Overall", as.character(d$year))
   d$age_group  <- ifelse(is.na(d$age_group), "Overall", d$age_group)
+  ageLevels    <- c("Overall", .sortAgeGroups(d$age_group[d$age_group != "Overall"]))
   d <- d[d$age_group %in% ageLevels, ]
   d <- d[order(d$cohort_name, d$database_id, d$year, na.last = FALSE),
          c("cohort_name", "database_id", "year_label", "age_group", "incidence_rate_p100py")]
@@ -402,13 +403,13 @@
 }
 
 .tableCiAgeGenderYear <- function(data) {
-  ageLevels    <- c("Overall", .ageOrder)
   genderLevels <- c("Overall", "Male", "Female")
 
   d <- data[, c("cohort_name", "database_id", "year", "age_group", "gender", "incidence_rate_p100py")]
   d$year_label <- ifelse(is.na(d$year), "Overall", as.character(d$year))
   d$age_group  <- ifelse(is.na(d$age_group), "Overall", d$age_group)
   d$gender     <- ifelse(is.na(d$gender),    "Overall", d$gender)
+  ageLevels    <- c("Overall", .sortAgeGroups(d$age_group[d$age_group != "Overall"]))
   d <- d[d$age_group %in% ageLevels & d$gender %in% genderLevels, ]
   d$col_key    <- paste0(d$age_group, "__", d$gender)
   d <- d[order(d$cohort_name, d$database_id, d$year, na.last = FALSE),
@@ -525,8 +526,17 @@ getCohortIncidence <- function(settings) {
             ": ", nBefore, " -> ", nrow(data), " rows")
   }
 
-  data$cohort_count        <- pmax(0, data$cohort_count)
+  data$cohort_count          <- pmax(0, data$cohort_count)
   data$incidence_rate_p100py <- pmax(0, data$incidence_rate_p100py)
+
+  ageLower <- suppressWarnings(
+    as.integer(sub("^([0-9]+).*", "\\1", data$age_group))
+  )
+  nBefore <- nrow(data)
+  data <- data[is.na(data$age_group) |
+                 (ageLower >= settings$minAge & ageLower <= settings$maxAge), ]
+  message("Age range filter [", settings$minAge, ", ", settings$maxAge, "]: ",
+          nBefore, " -> ", nrow(data), " rows")
 
   message("Returning ", nrow(data), " rows for ",
           length(unique(data$database_id)), " database(s) and ",
