@@ -28,14 +28,18 @@
 getCohortCounts <- function(settings) {
   checkmate::assertClass(settings, "PhenotypeReportSettings")
 
-  cgFolder <- file.path(settings$resultsFolder, "CohortGeneratorModule")
-  countPath <- file.path(cgFolder, "cg_cohort_count.csv")
-  definitionPath <- file.path(cgFolder, "cg_cohort_definition.csv")
-  checkmate::assertFileExists(countPath)
-  checkmate::assertFileExists(definitionPath)
+  dbFolders <- list.dirs(settings$resultsFolder, recursive = FALSE, full.names = TRUE)
 
-  counts <- utils::read.csv(countPath, stringsAsFactors = FALSE)
-  definitions <- utils::read.csv(definitionPath, stringsAsFactors = FALSE)
+  counts <- do.call(rbind, lapply(dbFolders, function(dbFolder) {
+    csvPath <- file.path(dbFolder, "CohortGeneratorModule", "cg_cohort_count.csv")
+    if (!file.exists(csvPath)) return(NULL)
+    utils::read.csv(csvPath, stringsAsFactors = FALSE)
+  }))
+
+  # Cohort definitions are identical across databases; read from the first available
+  defPath <- Filter(file.exists,
+                    file.path(dbFolders, "CohortGeneratorModule", "cg_cohort_definition.csv"))[[1]]
+  definitions <- utils::read.csv(defPath, stringsAsFactors = FALSE)
 
   data <- merge(
     counts,

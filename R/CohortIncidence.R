@@ -442,13 +442,17 @@
 getCohortIncidence <- function(settings) {
   checkmate::assertClass(settings, "PhenotypeReportSettings")
 
-  summaryPath    <- file.path(settings$resultsFolder, "CohortIncidenceModule", "ci_incidence_summary.csv")
-  definitionPath <- file.path(settings$resultsFolder, "CohortGeneratorModule", "cg_cohort_definition.csv")
-  checkmate::assertFileExists(summaryPath)
-  checkmate::assertFileExists(definitionPath)
+  dbFolders <- list.dirs(settings$resultsFolder, recursive = FALSE, full.names = TRUE)
 
-  data        <- utils::read.csv(summaryPath,    stringsAsFactors = FALSE, na.strings = "NA")
-  definitions <- utils::read.csv(definitionPath, stringsAsFactors = FALSE)
+  data <- do.call(rbind, lapply(dbFolders, function(dbFolder) {
+    csvPath <- file.path(dbFolder, "CohortIncidenceModule", "ci_incidence_summary.csv")
+    if (!file.exists(csvPath)) return(NULL)
+    utils::read.csv(csvPath, stringsAsFactors = FALSE, na.strings = "NA")
+  }))
+
+  defPath     <- Filter(file.exists,
+                        file.path(dbFolders, "CohortGeneratorModule", "cg_cohort_definition.csv"))[[1]]
+  definitions <- utils::read.csv(defPath, stringsAsFactors = FALSE)
 
   data$year <- suppressWarnings(as.integer(data$year))
 

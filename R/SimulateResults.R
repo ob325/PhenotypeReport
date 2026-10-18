@@ -215,39 +215,43 @@ writeStrategusResults <- function(simulatedResults, outputFolder) {
   )
   checkmate::assertString(outputFolder)
 
-  resultsFolder           <- file.path(outputFolder, "results")
-  databaseMetaDataFolder  <- file.path(resultsFolder, "DatabaseMetaData")
-  cohortGeneratorFolder   <- file.path(resultsFolder, "CohortGeneratorModule")
+  resultsFolder <- file.path(outputFolder, "results")
+  databaseIds   <- simulatedResults$databaseMetaData$database_id
 
-  dir.create(databaseMetaDataFolder, recursive = TRUE, showWarnings = FALSE)
-  dir.create(cohortGeneratorFolder,  recursive = TRUE, showWarnings = FALSE)
+  for (dbId in databaseIds) {
+    dbFolder              <- file.path(resultsFolder, dbId)
+    databaseMetaDataFolder <- file.path(dbFolder, "DatabaseMetaData")
+    cohortGeneratorFolder  <- file.path(dbFolder, "CohortGeneratorModule")
+    cohortIncidenceFolder  <- file.path(dbFolder, "CohortIncidenceModule")
 
-  utils::write.csv(
-    simulatedResults$databaseMetaData,
-    file.path(databaseMetaDataFolder, "database_meta_data.csv"),
-    row.names = FALSE
-  )
+    dir.create(databaseMetaDataFolder, recursive = TRUE, showWarnings = FALSE)
+    dir.create(cohortGeneratorFolder,  recursive = TRUE, showWarnings = FALSE)
+    dir.create(cohortIncidenceFolder,  recursive = TRUE, showWarnings = FALSE)
 
-  utils::write.csv(
-    simulatedResults$cohortDefinition,
-    file.path(cohortGeneratorFolder, "cg_cohort_definition.csv"),
-    row.names = FALSE
-  )
+    utils::write.csv(
+      simulatedResults$databaseMetaData[simulatedResults$databaseMetaData$database_id == dbId, ],
+      file.path(databaseMetaDataFolder, "database_meta_data.csv"),
+      row.names = FALSE
+    )
 
-  utils::write.csv(
-    simulatedResults$cohortCount,
-    file.path(cohortGeneratorFolder, "cg_cohort_count.csv"),
-    row.names = FALSE
-  )
+    utils::write.csv(
+      simulatedResults$cohortDefinition,
+      file.path(cohortGeneratorFolder, "cg_cohort_definition.csv"),
+      row.names = FALSE
+    )
 
-  cohortIncidenceFolder <- file.path(resultsFolder, "CohortIncidenceModule")
-  dir.create(cohortIncidenceFolder, recursive = TRUE, showWarnings = FALSE)
+    utils::write.csv(
+      simulatedResults$cohortCount[simulatedResults$cohortCount$database_id == dbId, ],
+      file.path(cohortGeneratorFolder, "cg_cohort_count.csv"),
+      row.names = FALSE
+    )
 
-  utils::write.csv(
-    simulatedResults$cohortIncidence,
-    file.path(cohortIncidenceFolder, "ci_incidence_summary.csv"),
-    row.names = FALSE
-  )
+    utils::write.csv(
+      simulatedResults$cohortIncidence[simulatedResults$cohortIncidence$database_id == dbId, ],
+      file.path(cohortIncidenceFolder, "ci_incidence_summary.csv"),
+      row.names = FALSE
+    )
+  }
 
   invisible(outputFolder)
 }

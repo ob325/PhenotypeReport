@@ -25,10 +25,17 @@
 getDatabaseInformation <- function(settings) {
   checkmate::assertClass(settings, "PhenotypeReportSettings")
 
-  csvPath <- file.path(settings$resultsFolder, "DatabaseMetaData", "database_meta_data.csv")
-  checkmate::assertFileExists(csvPath)
+  dbFolders <- list.dirs(settings$resultsFolder, recursive = FALSE, full.names = TRUE)
+  checkmate::assert(length(dbFolders) > 0,
+                    .var.name = "settings$resultsFolder",
+                    "No database sub-folders found in results folder.")
 
-  data <- utils::read.csv(csvPath, stringsAsFactors = FALSE)
+  data <- do.call(rbind, lapply(dbFolders, function(dbFolder) {
+    csvPath <- file.path(dbFolder, "DatabaseMetaData", "database_meta_data.csv")
+    if (!file.exists(csvPath)) return(NULL)
+    utils::read.csv(csvPath, stringsAsFactors = FALSE)
+  }))
+
   data$source_release_date     <- as.Date(data$source_release_date)
   data$cdm_release_date        <- as.Date(data$cdm_release_date)
   data$max_obs_period_end_date <- as.Date(data$max_obs_period_end_date)
