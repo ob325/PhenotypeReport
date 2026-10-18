@@ -136,8 +136,8 @@ simulateStrategusResults <- function(nDatabases = 2,
     yearMults[i, ] <- exp(cumsum(c(0, steps)))
   }
 
-  # calendar_year = 0 means "not stratified by year" (overall).
-  # gender = "" and age_group = "" mean "not stratified" (overall).
+  # NA in age_group, gender, or calendar_year means "not stratified" (overall),
+  # matching the convention used in real CohortDiagnostics output.
   buildRows <- function(ageVec, genderVec, yearVec) {
     grid <- expand.grid(
       combo_idx     = seq_len(nCombos),
@@ -147,16 +147,16 @@ simulateStrategusResults <- function(nDatabases = 2,
       stringsAsFactors = FALSE
     )
 
-    aM <- ifelse(grid$age_group == "", 1.0, ageMults[grid$age_group])
-    gM <- ifelse(grid$gender == "", 1.0, genderMults[grid$gender])
+    aM <- ifelse(is.na(grid$age_group), 1.0, ageMults[grid$age_group])
+    gM <- ifelse(is.na(grid$gender),    1.0, genderMults[grid$gender])
     yM <- ifelse(
-      grid$calendar_year == 0L, 1.0,
+      is.na(grid$calendar_year), 1.0,
       yearMults[cbind(grid$combo_idx, match(grid$calendar_year, years))]
     )
 
     ir <- round(baseIR[grid$combo_idx] * aM * gM * yM, 2)
     py <- round(basePY[grid$combo_idx] * aM *
-                  ifelse(grid$calendar_year == 0L, 1.0, 1 / nYears))
+                  ifelse(is.na(grid$calendar_year), 1.0, 1 / nYears))
     cc <- pmax(1L, round(ir / 100 * py))
 
     cbind(
@@ -172,13 +172,13 @@ simulateStrategusResults <- function(nDatabases = 2,
   }
 
   cohortIncidence <- rbind(
-    buildRows("",         "",                   0L),
-    buildRows(ageGroups,  "",                   0L),
-    buildRows("",         c("Male", "Female"),  0L),
-    buildRows(ageGroups,  c("Male", "Female"),  0L),
-    buildRows("",         c("", "Male", "Female"), years),
-    buildRows(ageGroups,  "",                   years),
-    buildRows(ageGroups,  c("Male", "Female"),  years)
+    buildRows(NA_character_,  NA_character_,                     NA_integer_),
+    buildRows(ageGroups,      NA_character_,                     NA_integer_),
+    buildRows(NA_character_,  c("Male", "Female"),               NA_integer_),
+    buildRows(ageGroups,      c("Male", "Female"),               NA_integer_),
+    buildRows(NA_character_,  c(NA_character_, "Male", "Female"), years),
+    buildRows(ageGroups,      NA_character_,                     years),
+    buildRows(ageGroups,      c("Male", "Female"),               years)
   )
   row.names(cohortIncidence) <- NULL
 

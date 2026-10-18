@@ -30,24 +30,24 @@
   if (identical(strata, character(0)) || identical(strata, "overall")) {
     list(
       data      = cohortIncidence[is.na(cohortIncidence$year) &
-                                    cohortIncidence$age_group == "Overall" &
-                                    cohortIncidence$gender    == "Overall", ],
+                                    is.na(cohortIncidence$age_group) &
+                                    is.na(cohortIncidence$gender), ],
       colorVar  = NULL,
       xVar      = NULL,
       facetType = "overall"
     )
   } else if (identical(strata, "age")) {
     d <- cohortIncidence[is.na(cohortIncidence$year) &
-                           cohortIncidence$age_group != "Overall" &
-                           cohortIncidence$gender    == "Overall", ]
+                           !is.na(cohortIncidence$age_group) &
+                           is.na(cohortIncidence$gender), ]
     d$age_group <- factor(d$age_group, levels = .ageOrder)
     list(data = d, colorVar = "database_id", xVar = "age_group", facetType = "cohort")
 
   } else if (identical(strata, "gender")) {
     list(
       data      = cohortIncidence[is.na(cohortIncidence$year) &
-                                    cohortIncidence$age_group == "Overall" &
-                                    cohortIncidence$gender    != "Overall", ],
+                                    is.na(cohortIncidence$age_group) &
+                                    !is.na(cohortIncidence$gender), ],
       colorVar  = "database_id",
       xVar      = "gender",
       facetType = "cohort"
@@ -55,37 +55,38 @@
   } else if (identical(strata, "year")) {
     list(
       data      = cohortIncidence[!is.na(cohortIncidence$year) &
-                                    cohortIncidence$age_group == "Overall" &
-                                    cohortIncidence$gender    == "Overall", ],
+                                    is.na(cohortIncidence$age_group) &
+                                    is.na(cohortIncidence$gender), ],
       colorVar  = "database_id",
       xVar      = "year",
       facetType = "cohort"
     )
   } else if (identical(strata, c("gender", "year"))) {
     d <- cohortIncidence[!is.na(cohortIncidence$year) &
-                           cohortIncidence$age_group == "Overall", ]
+                           is.na(cohortIncidence$age_group), ]
+    d$gender <- ifelse(is.na(d$gender), "Overall", d$gender)
     d$gender <- factor(d$gender, levels = c("Overall", "Male", "Female"))
     list(data = d, colorVar = "gender", xVar = "year", facetType = "grid")
 
   } else if (identical(strata, c("age", "year"))) {
     d <- cohortIncidence[!is.na(cohortIncidence$year) &
-                           cohortIncidence$gender    == "Overall" &
-                           cohortIncidence$age_group != "Overall", ]
+                           is.na(cohortIncidence$gender) &
+                           !is.na(cohortIncidence$age_group), ]
     d$age_group <- factor(d$age_group, levels = .ageOrder)
     list(data = d, colorVar = "age_group", xVar = "year", facetType = "grid")
 
   } else if (identical(strata, c("age", "gender"))) {
     d <- cohortIncidence[is.na(cohortIncidence$year) &
-                           cohortIncidence$age_group != "Overall" &
-                           cohortIncidence$gender    != "Overall", ]
+                           !is.na(cohortIncidence$age_group) &
+                           !is.na(cohortIncidence$gender), ]
     d$age_group <- factor(d$age_group, levels = .ageOrder)
     d$gender    <- factor(d$gender, levels = c("Male", "Female"))
     list(data = d, colorVar = "gender", xVar = "age_group", facetType = "grid")
 
   } else if (identical(strata, c("age", "gender", "year"))) {
     d <- cohortIncidence[!is.na(cohortIncidence$year) &
-                           cohortIncidence$age_group != "Overall" &
-                           cohortIncidence$gender    != "Overall", ]
+                           !is.na(cohortIncidence$age_group) &
+                           !is.na(cohortIncidence$gender), ]
     d$age_group <- factor(d$age_group, levels = .ageOrder)
     d$gender    <- factor(d$gender, levels = c("Male", "Female"))
     list(data = d, colorVar = "gender", xVar = "year", facetType = "age_year_gender")
@@ -265,7 +266,7 @@
 }
 
 .tableCiOverall <- function(data) {
-  d <- data[is.na(data$year) & data$age_group == "Overall" & data$gender == "Overall",
+  d <- data[is.na(data$year) & is.na(data$age_group) & is.na(data$gender),
             c("cohort_name", "database_id", "cohort_count", "person_years",
               "incidence_rate_p100py")]
 
@@ -283,8 +284,9 @@
 
 .tableCiAge <- function(data) {
   ageLevels <- c("Overall", .ageOrder)
-  d <- data[is.na(data$year) & data$gender == "Overall" & data$age_group %in% ageLevels,
+  d <- data[is.na(data$year) & is.na(data$gender),
             c("cohort_name", "database_id", "age_group", "incidence_rate_p100py")]
+  d$age_group <- ifelse(is.na(d$age_group), "Overall", d$age_group)
 
   wide <- tidyr::pivot_wider(d, names_from = "age_group", values_from = "incidence_rate_p100py")
   wide <- wide[order(wide$cohort_name, wide$database_id), c("cohort_name", "database_id", ageLevels)]
@@ -298,8 +300,9 @@
 
 .tableCiGender <- function(data) {
   genderLevels <- c("Overall", "Male", "Female")
-  d <- data[is.na(data$year) & data$age_group == "Overall" & data$gender %in% genderLevels,
+  d <- data[is.na(data$year) & is.na(data$age_group),
             c("cohort_name", "database_id", "gender", "incidence_rate_p100py")]
+  d$gender <- ifelse(is.na(d$gender), "Overall", d$gender)
 
   wide <- tidyr::pivot_wider(d, names_from = "gender", values_from = "incidence_rate_p100py")
   wide <- wide[order(wide$cohort_name, wide$database_id), c("cohort_name", "database_id", genderLevels)]
@@ -312,7 +315,7 @@
 }
 
 .tableCiYear <- function(data) {
-  d <- data[data$age_group == "Overall" & data$gender == "Overall",
+  d <- data[is.na(data$age_group) & is.na(data$gender),
             c("cohort_name", "database_id", "year", "incidence_rate_p100py")]
   d$year_label <- ifelse(is.na(d$year), "Overall", as.character(d$year))
   d <- d[order(d$cohort_name, d$database_id, d$year, na.last = FALSE),
@@ -332,8 +335,11 @@
   ageLevels    <- c("Overall", .ageOrder)
   genderLevels <- c("Overall", "Male", "Female")
 
-  d <- data[is.na(data$year) & data$age_group %in% ageLevels & data$gender %in% genderLevels,
+  d <- data[is.na(data$year),
             c("cohort_name", "database_id", "age_group", "gender", "incidence_rate_p100py")]
+  d$age_group <- ifelse(is.na(d$age_group), "Overall", d$age_group)
+  d$gender    <- ifelse(is.na(d$gender),    "Overall", d$gender)
+  d <- d[d$age_group %in% ageLevels & d$gender %in% genderLevels, ]
   d$col_key <- paste0(d$age_group, "__", d$gender)
 
   wide    <- tidyr::pivot_wider(d[, c("cohort_name", "database_id", "col_key", "incidence_rate_p100py")],
@@ -351,9 +357,11 @@
 .tableCiYearGender <- function(data) {
   genderLevels <- c("Overall", "Male", "Female")
 
-  d <- data[data$age_group == "Overall" & data$gender %in% genderLevels,
+  d <- data[is.na(data$age_group),
             c("cohort_name", "database_id", "year", "gender", "incidence_rate_p100py")]
   d$year_label <- ifelse(is.na(d$year), "Overall", as.character(d$year))
+  d$gender     <- ifelse(is.na(d$gender), "Overall", d$gender)
+  d <- d[d$gender %in% genderLevels, ]
   d <- d[order(d$cohort_name, d$database_id, d$year, na.last = FALSE),
          c("cohort_name", "database_id", "year_label", "gender", "incidence_rate_p100py")]
 
@@ -370,9 +378,11 @@
 .tableCiYearAge <- function(data) {
   ageLevels <- c("Overall", .ageOrder)
 
-  d <- data[data$gender == "Overall" & data$age_group %in% ageLevels,
+  d <- data[is.na(data$gender),
             c("cohort_name", "database_id", "year", "age_group", "incidence_rate_p100py")]
   d$year_label <- ifelse(is.na(d$year), "Overall", as.character(d$year))
+  d$age_group  <- ifelse(is.na(d$age_group), "Overall", d$age_group)
+  d <- d[d$age_group %in% ageLevels, ]
   d <- d[order(d$cohort_name, d$database_id, d$year, na.last = FALSE),
          c("cohort_name", "database_id", "year_label", "age_group", "incidence_rate_p100py")]
 
@@ -390,9 +400,11 @@
   ageLevels    <- c("Overall", .ageOrder)
   genderLevels <- c("Overall", "Male", "Female")
 
-  d <- data[data$age_group %in% ageLevels & data$gender %in% genderLevels,
-            c("cohort_name", "database_id", "year", "age_group", "gender", "incidence_rate_p100py")]
+  d <- data[, c("cohort_name", "database_id", "year", "age_group", "gender", "incidence_rate_p100py")]
   d$year_label <- ifelse(is.na(d$year), "Overall", as.character(d$year))
+  d$age_group  <- ifelse(is.na(d$age_group), "Overall", d$age_group)
+  d$gender     <- ifelse(is.na(d$gender),    "Overall", d$gender)
+  d <- d[d$age_group %in% ageLevels & d$gender %in% genderLevels, ]
   d$col_key    <- paste0(d$age_group, "__", d$gender)
   d <- d[order(d$cohort_name, d$database_id, d$year, na.last = FALSE),
          c("cohort_name", "database_id", "year_label", "col_key", "incidence_rate_p100py")]
@@ -457,20 +469,16 @@ getCohortIncidence <- function(settings) {
   }))
   message("Combined incidence data: ", nrow(data), " rows")
 
-  # Normalize to internal conventions used by all table/plot functions:
-  #   calendar_year = 0  -> year = NA (not stratified by year)
-  #   gender/age_group "" -> "Overall"
-  #   incidence_rate     -> incidence_rate_p100py
+  # Rename calendar_year -> year; NA means unstratified (overall).
+  # gender and age_group are also NA for unstratified rows.
   data$year <- suppressWarnings(as.integer(data$calendar_year))
-  data$year[data$year == 0L] <- NA_integer_
   data$calendar_year <- NULL
-  message("Year column normalized (0 -> NA); unique years: ",
-          paste(sort(unique(data$year)), collapse = ", "))
-
-  data$gender[data$gender == ""]       <- "Overall"
-  data$age_group[data$age_group == ""] <- "Overall"
-  message("Gender levels: ", paste(sort(unique(data$gender)), collapse = ", "))
-  message("Age group levels: ", paste(sort(unique(data$age_group)), collapse = ", "))
+  message("Unique years (NA = overall): ",
+          paste(c("NA", sort(na.omit(unique(data$year)))), collapse = ", "))
+  message("Gender values (NA = overall): ",
+          paste(sort(na.omit(unique(data$gender))), collapse = ", "))
+  message("Age group values (NA = overall): ",
+          paste(sort(na.omit(unique(data$age_group))), collapse = ", "))
 
   names(data)[names(data) == "incidence_rate"] <- "incidence_rate_p100py"
 
