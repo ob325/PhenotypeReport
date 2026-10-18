@@ -443,16 +443,26 @@ getCohortIncidence <- function(settings) {
   checkmate::assertClass(settings, "PhenotypeReportSettings")
 
   dbFolders <- list.dirs(settings$resultsFolder, recursive = FALSE, full.names = TRUE)
+  message("Found ", length(dbFolders), " database folder(s): ",
+          paste(basename(dbFolders), collapse = ", "))
 
   data <- do.call(rbind, lapply(dbFolders, function(dbFolder) {
     csvPath <- file.path(dbFolder, "CohortIncidenceModule", "ci_incidence_summary.csv")
-    if (!file.exists(csvPath)) return(NULL)
-    utils::read.csv(csvPath, stringsAsFactors = FALSE, na.strings = "NA")
+    if (!file.exists(csvPath)) {
+      message("  [SKIP] No incidence CSV in: ", basename(dbFolder))
+      return(NULL)
+    }
+    d <- utils::read.csv(csvPath, stringsAsFactors = FALSE, na.strings = "NA")
+    message("  [READ] ", basename(dbFolder), ": ", nrow(d), " rows")
+    d
   }))
+  message("Combined incidence data: ", nrow(data), " rows")
 
-  defPath     <- Filter(file.exists,
-                        file.path(dbFolders, "CohortGeneratorModule", "cg_cohort_definition.csv"))[[1]]
+  defPath <- Filter(file.exists,
+                    file.path(dbFolders, "CohortGeneratorModule", "cg_cohort_definition.csv"))[[1]]
+  message("Reading cohort definitions from: ", defPath)
   definitions <- utils::read.csv(defPath, stringsAsFactors = FALSE)
+  message("Loaded ", nrow(definitions), " cohort definition(s)")
 
   data$year <- suppressWarnings(as.integer(data$year))
 
@@ -463,9 +473,12 @@ getCohortIncidence <- function(settings) {
     by.y  = "cohort_definition_id",
     all.x = TRUE
   )
+  message("After cohort name merge: ", nrow(data), " rows")
 
   abbrevs <- .readDatabaseAbbreviations(dbFolders)
   if (!is.null(abbrevs)) {
+    message("Merging database abbreviations: ",
+            paste(abbrevs$cdm_source_abbreviation, collapse = ", "))
     data <- merge(data, abbrevs, by = "database_id", all.x = TRUE)
     data$database_id <- ifelse(
       !is.na(data$cdm_source_abbreviation),
@@ -473,11 +486,20 @@ getCohortIncidence <- function(settings) {
       data$database_id
     )
     data$cdm_source_abbreviation <- NULL
+  } else {
+    message("No database abbreviations found; using folder names as database_id")
   }
 
   if (!is.null(settings$cohortIds)) {
+    nBefore <- nrow(data)
     data <- data[data$cohort_id %in% settings$cohortIds, ]
+    message("Filtered to cohortIds ", paste(settings$cohortIds, collapse = ", "),
+            ": ", nBefore, " -> ", nrow(data), " rows")
   }
+
+  message("Returning ", nrow(data), " rows for ",
+          length(unique(data$database_id)), " database(s) and ",
+          length(unique(data$cohort_id)), " cohort(s)")
 
   data[, c(
     "database_id", "cohort_id", "cohort_name",
