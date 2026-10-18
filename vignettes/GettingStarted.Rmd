@@ -154,9 +154,10 @@ and gender.
 ci <- getCohortIncidence(settings)
 ```
 
-The `stratifyBy` argument accepts `"overall"` (default) or a character vector
-of one or two variables from `"age"`, `"gender"`, and `"year"`. The plot type
-is chosen automatically based on the combination.
+Both `tableCohortIncidence()` and `plotCohortIncidence()` accept the same
+`stratifyBy` vector. Tables use gt column spanners to group strata levels;
+an **Overall** level is always included for each strata dimension. For
+combinations involving `"year"`, year appears as rows with Overall at the top.
 
 ### Overall
 
@@ -170,11 +171,19 @@ plotCohortIncidence(ci, stratifyBy = "overall")
 
 ### Age
 
+```{r table-incidence-age}
+tableCohortIncidence(ci, stratifyBy = "age")
+```
+
 ```{r plot-incidence-age, fig.width=8, fig.height=4}
 plotCohortIncidence(ci, stratifyBy = "age")
 ```
 
 ### Gender
+
+```{r table-incidence-gender}
+tableCohortIncidence(ci, stratifyBy = "gender")
+```
 
 ```{r plot-incidence-gender, fig.width=7, fig.height=4}
 plotCohortIncidence(ci, stratifyBy = "gender")
@@ -182,13 +191,31 @@ plotCohortIncidence(ci, stratifyBy = "gender")
 
 ### Year
 
+```{r table-incidence-year}
+tableCohortIncidence(ci, stratifyBy = "year")
+```
+
 ```{r plot-incidence-year, fig.width=7, fig.height=4}
 plotCohortIncidence(ci, stratifyBy = "year")
 ```
 
+### Age + Gender
+
+Nested spanners: outer = age group, inner = gender.
+
+```{r table-incidence-age-gender}
+tableCohortIncidence(ci, stratifyBy = c("age", "gender"))
+```
+
+```{r plot-incidence-age-gender, fig.width=9, fig.height=6}
+plotCohortIncidence(ci, stratifyBy = c("age", "gender"))
+```
+
 ### Year + Gender
 
-Faceted by cohort × database; one line per gender.
+```{r table-incidence-year-gender}
+tableCohortIncidence(ci, stratifyBy = c("year", "gender"))
+```
 
 ```{r plot-incidence-year-gender, fig.width=9, fig.height=6}
 plotCohortIncidence(ci, stratifyBy = c("year", "gender"))
@@ -196,24 +223,19 @@ plotCohortIncidence(ci, stratifyBy = c("year", "gender"))
 
 ### Year + Age
 
-Faceted by cohort × database; one line per age group.
+```{r table-incidence-year-age}
+tableCohortIncidence(ci, stratifyBy = c("year", "age"))
+```
 
 ```{r plot-incidence-year-age, fig.width=9, fig.height=6}
 plotCohortIncidence(ci, stratifyBy = c("year", "age"))
 ```
 
-### Age + Gender
-
-Faceted by cohort × database; one line per gender across age groups.
-
-```{r plot-incidence-age-gender, fig.width=9, fig.height=6}
-plotCohortIncidence(ci, stratifyBy = c("age", "gender"))
-```
-
 ### Age + Gender + Year
 
-Returns one plot per database. Each row is a cohort; each column is an age
-group; lines show Male vs Female incidence over time.
+```{r table-incidence-age-gender-year}
+tableCohortIncidence(ci, stratifyBy = c("age", "gender", "year"))
+```
 
 ```{r plot-incidence-age-gender-year, fig.width=14, fig.height=6}
 plots <- plotCohortIncidence(ci, stratifyBy = c("age", "gender", "year"))
