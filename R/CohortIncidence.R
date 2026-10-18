@@ -519,6 +519,9 @@ getCohortIncidence <- function(settings) {
             ": ", nBefore, " -> ", nrow(data), " rows")
   }
 
+  data$cohort_count        <- pmax(0, data$cohort_count)
+  data$incidence_rate_p100py <- pmax(0, data$incidence_rate_p100py)
+
   message("Returning ", nrow(data), " rows for ",
           length(unique(data$database_id)), " database(s) and ",
           length(unique(data$cohort_id)), " cohort(s)")
