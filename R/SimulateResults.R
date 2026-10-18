@@ -50,6 +50,11 @@ simulateStrategusResults <- function(nDatabases = 2,
       "OptumDOD", "CPRD GOLD", "JMDC", "CUIMC",
       "VA CDW", "Premier", "IQVIA"
     ),
+    abbreviation = c(
+      "SynPUF", "AMBNET", "MDCD", "CCAE", "MDCR",
+      "OPTDOD", "CPRD", "JMDC", "CUIMC",
+      "VACDW", "PREMIER", "IQVIA"
+    ),
     holder = c(
       "CMS", "Inovalon", "IBM MarketScan", "IBM MarketScan", "IBM MarketScan",
       "Optum", "CPRD", "JMDC", "Columbia University",
@@ -64,7 +69,7 @@ simulateStrategusResults <- function(nDatabases = 2,
 
   databaseMetaData <- data.frame(
     cdm_source_name      = selectedDbs$name,
-    cdm_source_abbreviation = toupper(gsub("[^A-Z0-9]", "", selectedDbs$name)),
+    cdm_source_abbreviation = selectedDbs$abbreviation,
     cdm_holder           = selectedDbs$holder,
     source_release_date  = as.Date("2023-01-01") - sample(0:365, nDatabases, replace = TRUE),
     cdm_release_date     = as.Date("2023-06-01") - sample(0:180, nDatabases, replace = TRUE),

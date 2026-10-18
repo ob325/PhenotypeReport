@@ -464,6 +464,17 @@ getCohortIncidence <- function(settings) {
     all.x = TRUE
   )
 
+  abbrevs <- .readDatabaseAbbreviations(dbFolders)
+  if (!is.null(abbrevs)) {
+    data <- merge(data, abbrevs, by = "database_id", all.x = TRUE)
+    data$database_id <- ifelse(
+      !is.na(data$cdm_source_abbreviation),
+      data$cdm_source_abbreviation,
+      data$database_id
+    )
+    data$cdm_source_abbreviation <- NULL
+  }
+
   if (!is.null(settings$cohortIds)) {
     data <- data[data$cohort_id %in% settings$cohortIds, ]
   }

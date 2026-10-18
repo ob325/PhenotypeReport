@@ -13,7 +13,6 @@ License: Apache License (>= 2)
 URL: https://github.com/ohdsi/PhenotypeReport
 BugReports: https://github.com/ohdsi/PhenotypeReport/issues
 Encoding: UTF-8
-RoxygenNote: 7.3.2
 Depends:
   R (>= 4.1.0)
 Imports:
@@ -30,3 +29,4 @@ Suggests:
   rmarkdown
 Config/testthat/edition: 3
 VignetteBuilder: knitr
+Config/roxygen2/version: 8.1.1
