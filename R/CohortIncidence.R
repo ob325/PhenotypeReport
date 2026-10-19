@@ -335,13 +335,11 @@
 }
 
 .tableCiAgeGender <- function(data) {
-  genderLevels <- c("Overall", "Male", "Female")
+  genderLevels <- c("Male", "Female")
 
-  d <- data[is.na(data$year),
+  d <- data[is.na(data$year) & !is.na(data$age_group) & !is.na(data$gender),
             c("cohort_name", "database_id", "age_group", "gender", "incidence_rate_p100py")]
-  d$age_group <- ifelse(is.na(d$age_group), "Overall", d$age_group)
-  d$gender    <- ifelse(is.na(d$gender),    "Overall", d$gender)
-  ageLevels   <- c("Overall", .sortAgeGroups(d$age_group[d$age_group != "Overall"]))
+  ageLevels <- .sortAgeGroups(d$age_group)
   d <- d[d$age_group %in% ageLevels & d$gender %in% genderLevels, ]
   d$col_key <- paste0(d$age_group, "__", d$gender)
 
