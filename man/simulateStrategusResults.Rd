@@ -19,13 +19,13 @@ A named list with elements:
     \item{databaseMetaData}{Data frame matching \code{database_meta_data.csv}.}
     \item{cohortDefinition}{Data frame matching \code{cg_cohort_definition.csv}.}
     \item{cohortCount}{Data frame matching \code{cg_cohort_count.csv}.}
-    \item{cohortIncidence}{Data frame matching \code{ci_incidence_summary.csv}.}
+    \item{cohortIncidence}{Data frame matching \code{cd_incidence_rate.csv}.}
   }
 }
 \description{
 Creates a list of simulated data frames that mimic the CSV output produced
 by a Strategus pipeline run, covering the DatabaseMetaData,
-CohortGeneratorModule, and CohortIncidenceModule modules.
+CohortGeneratorModule, and CohortDiagnosticsModule modules.
 }
 \examples{
 simData <- simulateStrategusResults(nDatabases = 2, nCohorts = 3)

@@ -182,11 +182,85 @@ simulateStrategusResults <- function(nDatabases = 2,
   )
   row.names(cohortIncidence) <- NULL
 
+  # ── Index event breakdown ──────────────────────────────────────────────────
+
+  conceptPool <- data.frame(
+    concept_id        = c(201826L, 44831230L, 4229440L, 255573L, 316866L,
+                          45757370L, 4185932L, 4103640L, 437827L, 4103641L,
+                          35207357L, 45552942L, 44832366L, 46270025L, 44831231L),
+    concept_name      = c("Type 2 diabetes mellitus",
+                          "Type 2 diabetes mellitus (ICD10)",
+                          "Disorder of glucose metabolism",
+                          "Chronic obstructive lung disease",
+                          "Essential hypertension",
+                          "Unspecified essential hypertension (ICD10)",
+                          "Heart failure",
+                          "Atrial fibrillation",
+                          "Coronary arteriosclerosis",
+                          "Myocardial infarction",
+                          "Pulmonary embolism",
+                          "Ischemic stroke",
+                          "Diabetes mellitus (ICD9)",
+                          "COPD (ICD9)",
+                          "Hypertension NOS (ICD9)"),
+    domain_id         = c("Condition","Condition","Condition","Condition","Condition",
+                          "Condition","Condition","Condition","Condition","Condition",
+                          "Condition","Condition","Condition","Condition","Condition"),
+    vocabulary_id     = c("SNOMED","ICD10CM","SNOMED","SNOMED","SNOMED",
+                          "ICD10CM","SNOMED","SNOMED","SNOMED","SNOMED",
+                          "SNOMED","SNOMED","ICD9CM","ICD9CM","ICD9CM"),
+    concept_class_id  = c("Clinical Finding","ICD10CM code","Clinical Finding",
+                          "Clinical Finding","Clinical Finding","ICD10CM code",
+                          "Clinical Finding","Clinical Finding","Clinical Finding",
+                          "Clinical Finding","Clinical Finding","Clinical Finding",
+                          "ICD9CM code","ICD9CM code","ICD9CM code"),
+    standard_concept  = c("S","","S","S","S",
+                          "","S","S","S","S",
+                          "S","S","","",""),
+    concept_code      = c("44054006","E11","126877004","13645005","59621000",
+                          "I10","84114007","49436004","41702007","22298006",
+                          "59282003","422504002","250.00","496","401.9"),
+    stringsAsFactors  = FALSE
+  )
+
+  # Pick 6-10 concepts per cohort (same set across databases for realism)
+  nConcepts <- sample(6L:10L, nCohorts, replace = TRUE)
+  cohortConceptIds <- lapply(seq_len(nCohorts), function(i) {
+    sample(conceptPool$concept_id, nConcepts[i], replace = FALSE)
+  })
+
+  indexBreakdown <- do.call(rbind, lapply(seq_len(nrow(ciCombos)), function(i) {
+    dbId     <- ciCombos$database_id[i]
+    cohId    <- ciCombos$cohort_id[i]
+    ids      <- cohortConceptIds[[cohId]]
+    baseN    <- cohortCount$cohort_entries[
+      cohortCount$database_id == dbId & cohortCount$cohort_id == cohId
+    ]
+    weights  <- stats::runif(length(ids))
+    weights  <- weights / sum(weights)
+    cc       <- pmax(1L, round(baseN * weights))
+    sc       <- pmax(1L, round(cc * stats::runif(length(ids), 0.7, 1.0)))
+    domainRows <- conceptPool[match(ids, conceptPool$concept_id), ]
+    data.frame(
+      concept_id    = ids,
+      concept_count = cc,
+      subject_count = sc,
+      cohort_id     = cohId,
+      database_id   = dbId,
+      domain_field  = paste0("condition_", domainRows$domain_id),
+      domain_table  = "condition_occurrence",
+      stringsAsFactors = FALSE
+    )
+  }))
+  row.names(indexBreakdown) <- NULL
+
   list(
-    databaseMetaData = databaseMetaData,
-    cohortDefinition = cohortDefinition,
-    cohortCount      = cohortCount,
-    cohortIncidence  = cohortIncidence
+    databaseMetaData  = databaseMetaData,
+    cohortDefinition  = cohortDefinition,
+    cohortCount       = cohortCount,
+    cohortIncidence   = cohortIncidence,
+    conceptReference  = conceptPool,
+    indexEventBreakdown = indexBreakdown
   )
 }
 
@@ -213,7 +287,8 @@ writeStrategusResults <- function(simulatedResults, outputFolder) {
   checkmate::assertList(simulatedResults)
   checkmate::assertNames(
     names(simulatedResults),
-    must.include = c("databaseMetaData", "cohortDefinition", "cohortCount", "cohortIncidence")
+    must.include = c("databaseMetaData", "cohortDefinition", "cohortCount",
+                     "cohortIncidence", "conceptReference", "indexEventBreakdown")
   )
   checkmate::assertString(outputFolder)
 
@@ -251,6 +326,19 @@ writeStrategusResults <- function(simulatedResults, outputFolder) {
     utils::write.csv(
       simulatedResults$cohortIncidence[simulatedResults$cohortIncidence$database_id == dbId, ],
       file.path(cohortDiagnosticsFolder, "cd_incidence_rate.csv"),
+      row.names = FALSE
+    )
+
+    utils::write.csv(
+      simulatedResults$indexEventBreakdown[
+        simulatedResults$indexEventBreakdown$database_id == dbId, ],
+      file.path(cohortDiagnosticsFolder, "cd_index_event_breakdown.csv"),
+      row.names = FALSE
+    )
+
+    utils::write.csv(
+      simulatedResults$conceptReference,
+      file.path(cohortDiagnosticsFolder, "cd_concept.csv"),
       row.names = FALSE
     )
   }

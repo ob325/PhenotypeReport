@@ -4,7 +4,7 @@
 \alias{createSettings}
 \title{Create Phenotype Report Settings}
 \usage{
-createSettings(resultsFolder, cohortIds = NULL)
+createSettings(resultsFolder, cohortIds = NULL, minAge = 10L, maxAge = 99L)
 }
 \arguments{
 \item{resultsFolder}{Path to the Strategus results folder (the folder
@@ -14,6 +14,14 @@ containing sub-folders such as \code{DatabaseMetaData} and
 \item{cohortIds}{Integer vector of cohort definition IDs to include in
 the report. If \code{NULL} (default), all cohorts found in the results are
 included.}
+
+\item{minAge}{Lower bound of the youngest 10-year age group to include
+(e.g. \code{10} for the \code{"10-19"} group). Must be a multiple of 10.
+Defaults to \code{10}.}
+
+\item{maxAge}{Upper bound of the oldest 10-year age group to include
+(e.g. \code{99} for the \code{"90-99"} group). Must satisfy
+\code{(maxAge + 1) \%\% 10 == 0}. Defaults to \code{99}.}
 }
 \value{
 An object of class \code{PhenotypeReportSettings}.
@@ -24,5 +32,6 @@ Create Phenotype Report Settings
 \examples{
 settings <- createSettings(resultsFolder = "path/to/results")
 settings <- createSettings(resultsFolder = "path/to/results", cohortIds = c(1L, 2L))
+settings <- createSettings(resultsFolder = "path/to/results", minAge = 20L, maxAge = 79L)
 
 }

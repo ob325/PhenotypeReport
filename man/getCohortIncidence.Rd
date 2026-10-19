@@ -13,10 +13,11 @@ getCohortIncidence(settings)
 \value{
 A data frame with columns \code{database_id}, \code{cohort_id},
   \code{cohort_name}, \code{age_group}, \code{gender}, \code{year},
-  \code{persons_at_risk}, \code{person_days}, \code{outcomes},
-  \code{incidence_proportion_p100p}, and \code{incidence_rate_p100py}.
+  \code{cohort_count}, \code{person_years}, and
+  \code{incidence_rate_p100py}.
 }
 \description{
-Reads incidence results from a Strategus CohortIncidenceModule results
-folder and returns a combined data frame with cohort names attached.
+Reads incidence results from the CohortDiagnosticsModule
+\code{cd_incidence_rate.csv} file in each database sub-folder and returns a
+combined data frame with cohort names attached.
 }
