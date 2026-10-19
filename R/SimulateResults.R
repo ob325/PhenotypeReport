@@ -46,19 +46,19 @@ simulateStrategusResults <- function(nDatabases = 2,
 
   dbPool <- data.frame(
     name = c(
-      "Synpuf", "Ambnet", "MDCD", "CCAE", "MDCR",
-      "OptumDOD", "CPRD GOLD", "JMDC", "CUIMC",
-      "VA CDW", "Premier", "IQVIA"
+      "Aether Claims", "Boreal Health", "Cascade EHR", "Delta Registry",
+      "Elm Claims", "Fjord Health", "Gale EHR", "Harbor Claims",
+      "Isle Health", "Jade Registry", "Kestrel EHR", "Lark Claims"
     ),
     abbreviation = c(
-      "SynPUF", "AMBNET", "MDCD", "CCAE", "MDCR",
-      "OPTDOD", "CPRD", "JMDC", "CUIMC",
-      "VACDW", "PREMIER", "IQVIA"
+      "AETHER", "BOREAL", "CASCADE", "DELTA",
+      "ELM", "FJORD", "GALE", "HARBOR",
+      "ISLE", "JADE", "KESTREL", "LARK"
     ),
     holder = c(
-      "CMS", "Inovalon", "IBM MarketScan", "IBM MarketScan", "IBM MarketScan",
-      "Optum", "CPRD", "JMDC", "Columbia University",
-      "US Dept of Veterans Affairs", "Premier Healthcare", "IQVIA"
+      "Aether Analytics", "Boreal Health Institute", "Cascade Health Network", "Delta Research Group",
+      "Elm Data Consortium", "Fjord Population Health", "Gale Health Systems", "Harbor Medical Center",
+      "Isle Health Authority", "Jade Research Institute", "Kestrel Health Network", "Lark Data Services"
     ),
     stringsAsFactors = FALSE
   )
@@ -271,8 +271,9 @@ simulateStrategusResults <- function(nDatabases = 2,
 #' functions.
 #'
 #' @param simulatedResults A list returned by \code{\link{simulateStrategusResults}}.
-#' @param outputFolder     Path to the root folder where module sub-folders
-#'   will be created. The folder is created if it does not exist.
+#' @param outputFolder     Path to the results folder. One sub-folder per
+#'   database will be created directly inside this folder. The folder is
+#'   created if it does not exist.
 #'
 #' @return Invisibly returns \code{outputFolder}.
 #'
@@ -292,11 +293,10 @@ writeStrategusResults <- function(simulatedResults, outputFolder) {
   )
   checkmate::assertString(outputFolder)
 
-  resultsFolder <- file.path(outputFolder, "results")
-  databaseIds   <- simulatedResults$databaseMetaData$database_id
+  databaseIds <- simulatedResults$databaseMetaData$database_id
 
   for (dbId in databaseIds) {
-    dbFolder                  <- file.path(resultsFolder, dbId)
+    dbFolder <- file.path(outputFolder, dbId)
     databaseMetaDataFolder    <- file.path(dbFolder, "DatabaseMetaData")
     cohortGeneratorFolder     <- file.path(dbFolder, "CohortGeneratorModule")
     cohortDiagnosticsFolder   <- file.path(dbFolder, "CohortDiagnosticsModule")

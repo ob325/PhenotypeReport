@@ -38,8 +38,9 @@ simData <- simulateStrategusResults(nDatabases = 3, nCohorts = 4, seed = 42)
 str(simData, max.level = 1)
 ```
 
-Write the simulated data to disk with `writeStrategusResults()`. The function
-creates a `results/` sub-folder containing one directory per Strategus module.
+Write the simulated data to disk with `writeStrategusResults()`. Pass the path
+you want to use as the Strategus results folder; one sub-folder per database
+will be created directly inside it.
 
 ```{r write, eval=FALSE}
 outputFolder <- tempfile("phenotype_report")
@@ -47,12 +48,18 @@ writeStrategusResults(simData, outputFolder)
 
 # Folder structure produced:
 # outputFolder/
-#   results/
+#   synpuf/
 #     DatabaseMetaData/
 #       database_meta_data.csv
 #     CohortGeneratorModule/
 #       cg_cohort_definition.csv
 #       cg_cohort_count.csv
+#     CohortDiagnosticsModule/
+#       cd_incidence_rate.csv
+#       cd_index_event_breakdown.csv
+#       cd_concept.csv
+#   ambnet/
+#     ...
 ```
 
 ```{r write-hidden, include=FALSE}
@@ -69,14 +76,12 @@ to restrict the report to a specific subset of cohorts; omit it to include all
 cohorts found in the results.
 
 ```{r settings}
-resultsFolder <- file.path(outputFolder, "results")
-
 # Include all cohorts
-settings <- createSettings(resultsFolder = resultsFolder)
+settings <- createSettings(resultsFolder = outputFolder)
 settings
 
 # Or restrict to specific cohort IDs
-settings <- createSettings(resultsFolder = resultsFolder, cohortIds = c(1L, 2L))
+settings <- createSettings(resultsFolder = outputFolder, cohortIds = c(1L, 2L))
 settings
 ```
 
