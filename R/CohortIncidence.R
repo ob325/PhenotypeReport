@@ -26,7 +26,6 @@
   ggplot2::theme_bw(),
   ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 25, hjust = 1))
 )
-.yearAxis <- ggplot2::scale_x_continuous(breaks = seq(2010, 2026, by = 4))
 
 # Filter incidence data to rows matching a stratifyBy vector.
 # Returns a list: data + metadata used by tableCohortIncidence.
@@ -154,7 +153,7 @@
   )) +
     ggplot2::geom_line() +
     ggplot2::facet_wrap(~cohort_name) +
-    .yearAxis +
+    ggplot2::scale_x_continuous(breaks = scales::pretty_breaks(n = 6)) +
     ggplot2::labs(title = "Incidence Rate Over Time",
                   x = "Year", y = "IR per 1,000 person-years", color = "Database") +
     .bwTheme
@@ -172,7 +171,7 @@
     ggplot2::geom_line() +
     ggplot2::facet_grid(rows = ggplot2::vars(.data$cohort_name),
                         cols = ggplot2::vars(.data$database_id)) +
-    .yearAxis +
+    ggplot2::scale_x_continuous(breaks = scales::pretty_breaks(n = 6)) +
     .genderScale +
     ggplot2::labs(title = "Incidence Rate Over Time by Gender",
                   x = "Year", y = "IR per 1,000 person-years", color = "Gender") +
@@ -190,7 +189,7 @@
     ggplot2::geom_line() +
     ggplot2::facet_grid(rows = ggplot2::vars(.data$cohort_name),
                         cols = ggplot2::vars(.data$database_id)) +
-    .yearAxis +
+    ggplot2::scale_x_continuous(breaks = scales::pretty_breaks(n = 6)) +
     ggplot2::labs(title = "Incidence Rate Over Time by Age Group",
                   x = "Year", y = "IR per 1,000 person-years", color = "Age Group") +
     .bwTheme
@@ -229,7 +228,7 @@
       ggplot2::geom_line() +
       ggplot2::facet_grid(rows = ggplot2::vars(.data$cohort_name),
                           cols = ggplot2::vars(.data$age_group)) +
-      ggplot2::scale_x_continuous(breaks = seq(2010, 2026, by = 8)) +
+      ggplot2::scale_x_continuous(breaks = scales::pretty_breaks(n = 4)) +
       .genderScale +
       ggplot2::labs(
         title = paste("Incidence Rate by Age Group and Sex Over Time —", db),
@@ -536,6 +535,12 @@ getCohortIncidence <- function(settings) {
   data <- data[is.na(data$age_group) |
                  (ageLower >= settings$minAge & ageLower <= settings$maxAge), ]
   message("Age range filter [", settings$minAge, ", ", settings$maxAge, "]: ",
+          nBefore, " -> ", nrow(data), " rows")
+
+  nBefore <- nrow(data)
+  data <- data[is.na(data$year) |
+                 (data$year >= settings$minYear & data$year <= settings$maxYear), ]
+  message("Year range filter [", settings$minYear, ", ", settings$maxYear, "]: ",
           nBefore, " -> ", nrow(data), " rows")
 
   message("Returning ", nrow(data), " rows for ",

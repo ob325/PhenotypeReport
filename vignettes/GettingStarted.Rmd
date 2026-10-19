@@ -71,17 +71,27 @@ writeStrategusResults(simData, outputFolder)
 
 ## Step 2: Create a settings object
 
-`createSettings()` points the package at your results folder. Use `cohortIds`
-to restrict the report to a specific subset of cohorts; omit it to include all
-cohorts found in the results.
+`createSettings()` points the package at your results folder. The `minYear`
+and `maxYear` parameters are required and control which calendar years are
+included in incidence over time analyses. Use `cohortIds` to restrict the
+report to a specific subset of cohorts.
 
 ```{r settings}
 # Include all cohorts
-settings <- createSettings(resultsFolder = outputFolder)
+settings <- createSettings(
+  resultsFolder = outputFolder,
+  minYear = 2010L,
+  maxYear = 2023L
+)
 settings
 
 # Or restrict to specific cohort IDs
-settings <- createSettings(resultsFolder = outputFolder, cohortIds = c(1L, 2L))
+settings <- createSettings(
+  resultsFolder = outputFolder,
+  cohortIds     = c(1L, 2L),
+  minYear       = 2010L,
+  maxYear       = 2023L
+)
 settings
 ```
 

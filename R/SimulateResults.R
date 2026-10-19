@@ -109,13 +109,15 @@ simulateStrategusResults <- function(nDatabases = 2,
     cohortCount$cohort_subjects * stats::runif(nrow(cohortCount), 1.0, 1.5)
   )
 
-  ageGroups <- c("18-34", "35-44", "45-54", "55-64", "65-74", "75+")
+  ageGroups <- c("0-9", "10-19", "20-29", "30-39", "40-49",
+                 "50-59", "60-69", "70-79", "80-89", "90-99")
   years     <- 2010L:2026L
   nYears    <- length(years)
 
   # Multipliers relative to overall IR
-  ageMults    <- c("18-34" = 0.25, "35-44" = 0.55, "45-54" = 1.00,
-                   "55-64" = 1.70, "65-74" = 2.80, "75+"   = 3.80)
+  ageMults    <- c("0-9"  = 0.05, "10-19" = 0.10, "20-29" = 0.20, "30-39" = 0.45,
+                   "40-49" = 0.85, "50-59" = 1.40, "60-69" = 2.20,
+                   "70-79" = 3.00, "80-89" = 3.60, "90-99" = 3.80)
   genderMults <- c(Male = 1.18, Female = 0.85)
 
   # One baseline IR and person-years per cohort x database

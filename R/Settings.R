@@ -26,23 +26,37 @@
 #' @param maxAge        Upper bound of the oldest 10-year age group to include
 #'   (e.g. \code{99} for the \code{"90-99"} group). Must satisfy
 #'   \code{(maxAge + 1) \%\% 10 == 0}. Defaults to \code{99}.
+#' @param minYear       Earliest calendar year to include in incidence over time
+#'   analyses. Must be an integer less than \code{maxYear}.
+#' @param maxYear       Latest calendar year to include in incidence over time
+#'   analyses. Must be an integer greater than \code{minYear}.
 #'
 #' @return An object of class \code{PhenotypeReportSettings}.
 #'
 #' @examples
-#' settings <- createSettings(resultsFolder = "path/to/results")
-#' settings <- createSettings(resultsFolder = "path/to/results", cohortIds = c(1L, 2L))
-#' settings <- createSettings(resultsFolder = "path/to/results", minAge = 20L, maxAge = 79L)
+#' settings <- createSettings(
+#'   resultsFolder = "path/to/results",
+#'   minYear = 2010L, maxYear = 2023L
+#' )
+#' settings <- createSettings(
+#'   resultsFolder = "path/to/results",
+#'   cohortIds = c(1L, 2L),
+#'   minYear = 2015L, maxYear = 2022L
+#' )
 #'
 #' @export
 createSettings <- function(resultsFolder,
                            cohortIds = NULL,
                            minAge    = 10L,
-                           maxAge    = 99L) {
+                           maxAge    = 99L,
+                           minYear,
+                           maxYear) {
   checkmate::assertDirectoryExists(resultsFolder)
   checkmate::assertIntegerish(cohortIds, null.ok = TRUE, any.missing = FALSE)
   checkmate::assertInt(minAge, lower = 0L)
   checkmate::assertInt(maxAge, lower = 9L)
+  checkmate::assertInt(minYear)
+  checkmate::assertInt(maxYear)
 
   if (minAge %% 10L != 0L) {
     stop("minAge must be the lower bound of a 10-year age group (a multiple of 10, e.g. 0, 10, 20, ..., 90).")
@@ -53,12 +67,17 @@ createSettings <- function(resultsFolder,
   if (minAge >= maxAge) {
     stop("minAge (", minAge, ") must be less than maxAge (", maxAge, ").")
   }
+  if (minYear >= maxYear) {
+    stop("minYear (", minYear, ") must be less than maxYear (", maxYear, ").")
+  }
 
   settings <- list(
     resultsFolder = resultsFolder,
     cohortIds     = if (is.null(cohortIds)) NULL else as.integer(cohortIds),
     minAge        = as.integer(minAge),
-    maxAge        = as.integer(maxAge)
+    maxAge        = as.integer(maxAge),
+    minYear       = as.integer(minYear),
+    maxYear       = as.integer(maxYear)
   )
 
   class(settings) <- "PhenotypeReportSettings"
@@ -75,5 +94,6 @@ print.PhenotypeReportSettings <- function(x, ...) {
     cat("  Cohorts:       ", paste(x$cohortIds, collapse = ", "), "\n")
   }
   cat("  Age range:     ", x$minAge, "-", x$maxAge, "\n")
+  cat("  Year range:    ", x$minYear, "-", x$maxYear, "\n")
   invisible(x)
 }
